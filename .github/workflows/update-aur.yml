@@ -12,36 +12,31 @@ jobs:
     
     steps:
       # 第一步：获取版本信息并检查
-      - name: 获取版本信息并检查
-        id: get_tag
+      - name: 从latest接口获取最新版本
+        id: get_latest_tag
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            RELEASE_TAG="${{ github.event.release.tag_name }}"
-            echo "Release事件，tag: $RELEASE_TAG"
-          else
-            # 手动触发时，获取所有release并找到最新的日期格式版本
-            echo "手动触发，获取所有release..."
-            ALL_RELEASES=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases")
-            
-            # 查找最新的纯日期格式版本
-            RELEASE_TAG=$(echo "$ALL_RELEASES" | jq -r '.[] | select(.prerelease == false) | .tag_name' | grep -E '^[0-9]{8}$' | head -1)
-            
-            if [ -z "$RELEASE_TAG" ]; then
-              echo "错误：没有找到符合条件的纯日期格式release"
-              exit 1
-            fi
-            
-            echo "找到最新日期格式版本: $RELEASE_TAG"
+          # 使用 /releases/latest 接口直接获取最新的正式版
+          LATEST_RELEASE_JSON=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases/latest")
+          
+          # 从返回的JSON中提取tag_name字段
+          RELEASE_TAG=$(echo "$LATEST_RELEASE_JSON" | jq -r '.tag_name')
+          
+          # 检查获取到的版本号是否为空
+          if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
+            echo "❌ 错误：未能从latest接口获取到有效的版本号"
+            exit 1
+          fi
+          
+          echo "通过latest接口找到的最新版本: $RELEASE_TAG"
+          
+          # 检查版本号是否为纯日期格式 (8位数字)
+          if [[ ! "$RELEASE_TAG" =~ ^[0-9]{8}$ ]]; then
+            echo "❌ 版本号 '$RELEASE_TAG' 不符合纯日期格式 (需要8位数字)"
+            exit 1
           fi
           
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_OUTPUT
           
-          # 检查是否为纯日期格式
-          if [[ ! "$RELEASE_TAG" =~ ^[0-9]{8}$ ]]; then
-            echo "❌ 版本号 '$RELEASE_TAG' 不是纯日期格式"
-            exit 1
-          fi
-
       # 第二步：生成 PKGBUILD 文件
       - name: 生成 PKGBUILD 文件
         id: generate_pkgbuild
