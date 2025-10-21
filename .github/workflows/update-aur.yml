@@ -60,7 +60,7 @@ jobs:
           echo 'url="https://github.com/TC999/zed-loc"' >> PKGBUILD
           echo 'provides=("$pkgname")' >> PKGBUILD
           echo 'conflicts=("$pkgname")' >> PKGBUILD
-          echo "source=(\"\\$pkgname-\\$pkgver.tar.gz::$DOWNLOAD_URL\")" >> PKGBUILD
+          echo "source=(\"$pkgname-$pkgver.tar.gz::$DOWNLOAD_URL\")" >> PKGBUILD
           echo "sha512sums=('$NEW_SHA512')" >> PKGBUILD
           echo '' >> PKGBUILD
           echo '# 解压源码包' >> PKGBUILD
