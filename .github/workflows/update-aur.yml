@@ -11,19 +11,34 @@ jobs:
     name: Publish to AUR
     
     steps:
-      - name: Get and validate release tag
+      # 第一步：获取版本信息并检查
+      - name: 获取版本信息并检查
         id: get_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             RELEASE_TAG="${{ github.event.release.tag_name }}"
+            echo "Release事件，tag: $RELEASE_TAG"
           else
-            API_RESPONSE=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases")
-            RELEASE_TAG=$(echo "$API_RESPONSE" | jq -r .tag_name)
+            # 手动触发时，获取所有release并找到最新的日期格式版本
+            echo "手动触发，获取所有release..."
+            ALL_RELEASES=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases")
+            
+            # 查找最新的纯日期格式版本
+            RELEASE_TAG=$(echo "$ALL_RELEASES" | jq -r '.[] | select(.prerelease == false) | .tag_name' | grep -E '^[0-9]{8}$' | head -1)
+            
+            if [ -z "$RELEASE_TAG" ]; then
+              echo "错误：没有找到符合条件的纯日期格式release"
+              exit 1
+            fi
+            
+            echo "找到最新日期格式版本: $RELEASE_TAG"
           fi
+          
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_OUTPUT
           
+          # 检查是否为纯日期格式
           if [[ ! "$RELEASE_TAG" =~ ^[0-9]{8}$ ]]; then
-            echo "❌ 跳过非日期格式版本: $RELEASE_TAG"
+            echo "❌ 版本号 '$RELEASE_TAG' 不是纯日期格式"
             exit 1
           fi
 
@@ -74,7 +89,7 @@ jobs:
           
           cat PKGBUILD
 
-      - name: Publish AUR package
+      - name: 发布到 AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: zed-cn
@@ -84,3 +99,4 @@ jobs:
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: Update to ${{ steps.get_tag.outputs.RELEASE_TAG }}
           ssh_keyscan_types: rsa,ecdsa,ed25519
+
