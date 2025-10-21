@@ -3,7 +3,7 @@ name: Update AUR Package
 on:
   release:
     types: [published]
-  workflow_dispatch:  # 手动触发时使用最新release
+  workflow_dispatch:
 
 jobs:
   update-aur:
@@ -13,79 +13,90 @@ jobs:
     - name: Get release tag
       id: get_tag
       run: |
-        # 如果是release事件，直接从事件中获取
         if [ "${{ github.event_name }}" = "release" ]; then
           RELEASE_TAG="${{ github.event.release.tag_name }}"
-          echo "Release事件，tag: $RELEASE_TAG"
         else
-          # 手动触发时，通过API获取最新release
-          echo "手动触发，获取最新release..."
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/TC999/zed-loc/releases/latest)
           RELEASE_TAG=$(echo "$LATEST_RELEASE" | jq -r .tag_name)
-          echo "最新release tag: $RELEASE_TAG"
         fi
-        
-        if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
-          echo "错误：无法获取release tag"
-          exit 1
-        fi
-        
         echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_OUTPUT
         
     - name: Check release type
       id: check
       run: |
         RELEASE_TAG="${{ steps.get_tag.outputs.RELEASE_TAG }}"
-        echo "检查release tag: $RELEASE_TAG"
-        
-        # 检查是否为纯日期格式 (8位数字)
         if [[ "$RELEASE_TAG" =~ ^[0-9]{8}$ ]]; then
-          echo "✅ 纯日期版本: $RELEASE_TAG，继续更新AUR"
           echo "is_date_release=true" >> $GITHUB_OUTPUT
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
         else
-          echo "❌ 跳过预发布版本: $RELEASE_TAG"
           echo "is_date_release=false" >> $GITHUB_OUTPUT
         fi
         
-    - name: Setup SSH
+    - name: Setup SSH for AUR
       if: steps.check.outputs.is_date_release == 'true'
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+      run: |
+        # 创建SSH目录
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        
+        # 将私钥写入文件
+        echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur_key
+        chmod 600 ~/.ssh/aur_key
+        
+        # 获取并添加AUR服务器的主机密钥
+        ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+        
+        # 验证主机密钥
+        echo "AUR服务器主机密钥:"
+        grep aur.archlinux.org ~/.ssh/known_hosts
+        
+        # 测试连接（忽略第一次的警告）
+        echo "测试SSH连接..."
+        ssh -T -o StrictHostKeyChecking=no -i ~/.ssh/aur_key aur@aur.archlinux.org || true
         
     - name: Update AUR package
       if: steps.check.outputs.is_date_release == 'true'
+      env:
+        GIT_SSH_COMMAND: "ssh -i ~/.ssh/aur_key -o UserKnownHostsFile=~/.ssh/known_hosts"
       run: |
         set -e
-        
         echo "开始更新AUR包到版本: ${{ steps.check.outputs.release_tag }}"
         
+        # 配置Git用户
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
         # 克隆AUR仓库
+        echo "克隆AUR仓库..."
         git clone ssh://aur@aur.archlinux.org/zed-loc.git aur-repo
         cd aur-repo
         
         LATEST_TAG="${{ steps.check.outputs.release_tag }}"
         DOWNLOAD_URL="https://github.com/TC999/zed-loc/releases/download/$LATEST_TAG/zed-linux-x86_64.tar.gz"
         
+        echo "更新PKGBUILD到版本: $LATEST_TAG"
         # 更新PKGBUILD
         sed -i "s/^pkgver=.*/pkgver=$LATEST_TAG/" PKGBUILD
         sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
         
         # 计算校验和
-        echo "下载文件计算校验和..."
+        echo "计算SHA256校验和..."
         NEW_SHA256=$(curl -L -f "$DOWNLOAD_URL" | sha256sum | awk '{print $1}')
-        echo "SHA256: $NEW_SHA256"
+        echo "新校验和: $NEW_SHA256"
         sed -i "s/^sha256sums=.*/sha256sums=('$NEW_SHA256')/" PKGBUILD
         
         # 更新.SRCINFO
+        echo "生成.SRCINFO文件..."
         makepkg --printsrcinfo > .SRCINFO
         
-        # 提交更改
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add PKGBUILD .SRCINFO
-        git diff --cached --quiet || git commit -m "Update to $LATEST_TAG"
-        git push
-        
-        echo "✅ AUR包更新完成!"
+        # 检查是否有更改
+        if git status --porcelain | grep -q .; then
+          echo "检测到更改，提交更新..."
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to $LATEST_TAG"
+          git push
+          echo "✅ AUR包更新完成!"
+        else
+          echo "⚠️ 没有检测到更改，跳过提交"
+        fi
