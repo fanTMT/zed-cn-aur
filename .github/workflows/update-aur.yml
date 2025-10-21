@@ -17,7 +17,7 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             RELEASE_TAG="${{ github.event.release.tag_name }}"
           else
-            API_RESPONSE=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases/latest")
+            API_RESPONSE=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases")
             RELEASE_TAG=$(echo "$API_RESPONSE" | jq -r .tag_name)
           fi
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_OUTPUT
