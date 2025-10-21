@@ -12,7 +12,7 @@ jobs:
     
     steps:
       # 第一步：获取版本信息并检查
-      - name: 获取版本信息并检查
+      - name: Get and validate release tag
         id: get_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -32,80 +32,84 @@ jobs:
             echo "✅ 版本号 '$RELEASE_TAG' 格式正确，继续流程。"
           fi
 
-      # 第二步：生成 PKGBUILD 文件（保持你原有的复杂结构）
-      - name: 生成PKGBUILD 文件
+      # 第二步：生成 PKGBUILD 文件
+      - name: Generate PKGBUILD
         id: generate_pkgbuild
         run: |
           RELEASE_TAG="${{ steps.get_tag.outputs.RELEASE_TAG }}"
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/zed-linux-x86_64.tar.gz"
+          DOWNLOAD_URL="https://github.com/TC999/zed-loc/releases/download/$RELEASE_TAG/zed-linux-x86_64.tar.gz"
           
           echo "正在计算文件校验和..."
           NEW_SHA512=$(curl -L -f "$DOWNLOAD_URL" | sha512sum | awk '{print $1}')
           echo "版本: $RELEASE_TAG"
           echo "SHA512: $NEW_SHA512"
           
-          # 生成 PKGBUILD 文件内容（保持你原有的复杂结构）
-          cat > PKGBUILD << EOF
+          # 使用heredoc格式生成PKGBUILD，避免YAML解析问题
+          cat << 'EOF' > PKGBUILD
 # Maintainer: li0shang <li0shang@163.com>
 pkgname="zed-cn"
-pkgver=$RELEASE_TAG
+pkgver=PKGVER_PLACEHOLDER
 _path="zed-dev"
 pkgrel=1
 pkgdesc=" zed-loc (Zed 汉化) github-TC999/zed-loc"
 arch=('x86_64')
 license=('custom:"Copyright (c) 2015 Abner Lee All Rights Reserved."')
 url="https://github.com/TC999/zed-loc"
-provides=("\$pkgname")
-conflicts=("\$pkgname")
-source=("\$pkgname-\$pkgver.tar.gz::$DOWNLOAD_URL")
-sha512sums=('$NEW_SHA512')
+provides=("$pkgname")
+conflicts=("$pkgname")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/TC999/zed-loc/releases/download/$pkgver/zed-linux-x86_64.tar.gz")
+sha512sums=('SHA512_PLACEHOLDER')
 
 # 解压源码包
 prepare() {
-  tar -xzf "\$pkgname-\$pkgver.tar.gz"
+  tar -xzf "$pkgname-$pkgver.tar.gz"
 }
 
 # 安装到 /opt
 package() {
   # 创建目标目录
-  install -d "\$pkgdir/opt/\$pkgname"
+  install -d "$pkgdir/opt/$pkgname"
   
   # 复制所有文件到 /opt/软件名
-  cp -r "\$srcdir/\$_path.app/"* "\$pkgdir/opt/\$pkgname/"
+  cp -r "$srcdir/$_path.app/"* "$pkgdir/opt/$pkgname/"
   
   # 设置权限（可选）
-  # find "\$pkgdir/opt/\$pkgname" -type d -exec chmod 755 {} \\;
-  # find "\$pkgdir/opt/\$pkgname" -type f -exec chmod 644 {} \\;
+  # find "$pkgdir/opt/$pkgname" -type d -exec chmod 755 {} \;
+  # find "$pkgdir/opt/$pkgname" -type f -exec chmod 644 {} \;
   
   # 如果需要：添加可执行文件到系统路径
-  install -d "\$pkgdir/usr/bin"
-  ln -s "/opt/\$pkgname/bin/zed" "\$pkgdir/usr/bin/zed"
+  install -d "$pkgdir/usr/bin"
+  ln -s "/opt/$pkgname/bin/zed" "$pkgdir/usr/bin/zed"
   # 安装图标文件
   _icon_sizes=("512x512" "1024x1024")
-  for size in "\${_icon_sizes[@]}"; do
-    if [ -f "\$srcdir/\$_path.app/share/icons/hicolor/\$size/apps/zed.png" ]; then
-      install -Dm644 "\$srcdir/\$_path.app/share/icons/hicolor/\$size/apps/zed.png" \\
-        "\$pkgdir/usr/share/icons/hicolor/\$size/apps/zed-cn.png"
+  for size in "${_icon_sizes[@]}"; do
+    if [ -f "$srcdir/$_path.app/share/icons/hicolor/$size/apps/zed.png" ]; then
+      install -Dm644 "$srcdir/$_path.app/share/icons/hicolor/$size/apps/zed.png" \
+        "$pkgdir/usr/share/icons/hicolor/$size/apps/zed-cn.png"
     fi
   done
   # 如果需要：桌面文件
-  install -Dm644 "\$srcdir/\$_path.app/share/applications/\$_path.desktop" "\$pkgdir/usr/share/applications/zed-cn.desktop"
+  install -Dm644 "$srcdir/$_path.app/share/applications/$_path.desktop" "$pkgdir/usr/share/applications/zed-cn.desktop"
 
   # 移除调试符号（避免生成debug包）
-  find "\$pkgdir" -name "*.debug" -delete
-  strip --strip-all "\$pkgdir/opt/\$pkgname/bin/zed" 2>/dev/null || true
-  strip --strip-all "\$pkgdir/opt/\$pkgname/libexec/zed-editr" 2>/dev/null || true
+  find "$pkgdir" -name "*.debug" -delete
+  strip --strip-all "$pkgdir/opt/$pkgname/bin/zed" 2>/dev/null || true
+  strip --strip-all "$pkgdir/opt/$pkgname/libexec/zed-editr" 2>/dev/null || true
   
 }
 # 明确指定不构建debug包
 options=('!debug')
 EOF
+
+          # 替换占位符
+          sed -i "s/PKGVER_PLACEHOLDER/$RELEASE_TAG/g" PKGBUILD
+          sed -i "s/SHA512_PLACEHOLDER/$NEW_SHA512/g" PKGBUILD
           
           echo "生成的 PKGBUILD 内容："
           cat PKGBUILD
 
       # 第三步：使用专用 Action 发布到 AUR
-      - name: 发布到 AUR
+      - name: Publish AUR package
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: zed-cn
