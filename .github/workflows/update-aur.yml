@@ -42,52 +42,12 @@ jobs:
             exit 1
           fi
 
-      - name: Create PKGBUILD file
-        id: create_pkgbuild
+      # 第二步：生成 PKGBUILD 文件
+      - name: 生成 PKGBUILD 文件
+        id: generate_pkgbuild
         run: |
-          RELEASE_TAG="${{ steps.get_tag.outputs.RELEASE_TAG }}"
-          DOWNLOAD_URL="https://github.com/TC999/zed-loc/releases/download/$RELEASE_TAG/zed-linux-x86_64.tar.gz"
-          NEW_SHA512=$(curl -L -f "$DOWNLOAD_URL" | sha512sum | awk '{print $1}')
-          
-          # 创建简单的PKGBUILD文件
-          echo '# Maintainer: li0shang <li0shang@163.com>' > PKGBUILD
-          echo 'pkgname="zed-cn"' >> PKGBUILD
-          echo "pkgver=$RELEASE_TAG" >> PKGBUILD
-          echo '_path="zed-dev"' >> PKGBUILD
-          echo 'pkgrel=1' >> PKGBUILD
-          echo 'pkgdesc="zed-loc (Zed 汉化) github-TC999/zed-loc"' >> PKGBUILD
-          echo "arch=('x86_64')" >> PKGBUILD
-          echo 'license=("custom:Copyright (c) 2015 Abner Lee All Rights Reserved.")' >> PKGBUILD
-          echo 'url="https://github.com/TC999/zed-loc"' >> PKGBUILD
-          echo 'provides=("$pkgname")' >> PKGBUILD
-          echo 'conflicts=("$pkgname")' >> PKGBUILD
-          echo "source=(\"\$pkgname-\$pkgver.tar.gz::https://github.com/TC999/zed-loc/releases/download/$pkgver/zed-linux-x86_64.tar.gz\")" >> PKGBUILD
-          echo "sha512sums=('$NEW_SHA512')" >> PKGBUILD
-          echo '' >> PKGBUILD
-          echo 'prepare() {' >> PKGBUILD
-          echo '  tar -xzf "$pkgname-$pkgver.tar.gz"' >> PKGBUILD
-          echo '}' >> PKGBUILD
-          echo '' >> PKGBUILD
-          echo 'package() {' >> PKGBUILD
-          echo '  install -d "$pkgdir/opt/$pkgname"' >> PKGBUILD
-          echo '  cp -r "$srcdir/$_path.app/"* "$pkgdir/opt/$pkgname/"' >> PKGBUILD
-          echo '  install -d "$pkgdir/usr/bin"' >> PKGBUILD
-          echo '  ln -s "/opt/$pkgname/bin/zed" "$pkgdir/usr/bin/zed"' >> PKGBUILD
-          echo '  _icon_sizes=("512x512" "1024x1024")' >> PKGBUILD
-          echo '  for size in "${_icon_sizes[@]}"; do' >> PKGBUILD
-          echo '    if [ -f "$srcdir/$_path.app/share/icons/hicolor/$size/apps/zed.png" ]; then' >> PKGBUILD
-          echo '      install -Dm644 "$srcdir/$_path.app/share/icons/hicolor/$size/apps/zed.png" \' >> PKGBUILD
-          echo '        "$pkgdir/usr/share/icons/hicolor/$size/apps/zed-cn.png"' >> PKGBUILD
-          echo '    fi' >> PKGBUILD
-          echo '  done' >> PKGBUILD
-          echo '  install -Dm644 "$srcdir/$_path.app/share/applications/$_path.desktop" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
-          echo '  find "$pkgdir" -name "*.debug" -delete' >> PKGBUILD
-          echo '  strip --strip-all "$pkgdir/opt/$pkgname/bin/zed" 2>/dev/null || true' >> PKGBUILD
-          echo '  strip --strip-all "$pkgdir/opt/$pkgname/libexec/zed-editr" 2>/dev/null || true' >> PKGBUILD
-          echo '}' >> PKGBUILD
-          echo "options=('!debug')" >> PKGBUILD
-          
-          cat PKGBUILD
+          chmod +x ./generate-pkgbuild.sh
+          ./generate-pkgbuild.sh "${{ steps.get_tag.outputs.RELEASE_TAG }}"
 
       - name: 发布到 AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
