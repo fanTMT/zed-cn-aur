@@ -42,7 +42,7 @@ jobs:
       - name: 生成 PKGBUILD 文件
         id: generate_pkgbuild
         run: |
-          RELEASE_TAG="${{ steps.get_tag.outputs.RELEASE_TAG }}"
+          RELEASE_TAG="${{ steps.get_latest_tag.outputs.RELEASE_TAG }}"
           DOWNLOAD_URL="https://github.com/TC999/zed-loc/releases/download/$RELEASE_TAG/zed-linux-x86_64.tar.gz"
           
           echo "正在计算文件校验和..."
