@@ -1,15 +1,16 @@
-name: Update AUR Package
+name: 自动更新TC999.zed-loc
 
 on:
   release:
     types: [published]
   workflow_dispatch:
-
+  schedule:
+    - cron: '0 8 * * *'
+    
 jobs:
   aur-publish:
     runs-on: ubuntu-latest
-    name: Publish to AUR
-    
+    name: 上传到AUR
     steps:
       # 第一步：获取版本信息并检查
       - name: 从latest接口获取最新版本
