@@ -3,9 +3,9 @@ name: 自动更新TC999.zed-loc
 on:
   release:
     types: [published]
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
     
 jobs:
   aur-publish:
@@ -25,7 +25,6 @@ jobs:
           # 检查获取到的版本号是否为空
           if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
             echo "❌ 错误：未能从latest接口获取到有效的版本号"
-            echo "VALID_VERSION=false" >> $GITHUB_OUTPUT
             exit 1
           fi
           
@@ -34,16 +33,13 @@ jobs:
           # 检查版本号是否为纯日期格式 (8位数字)
           if [[ ! "$RELEASE_TAG" =~ ^[0-9]{8}$ ]]; then
             echo "❌ 版本号 '$RELEASE_TAG' 不符合纯日期格式 (需要8位数字)"
-            echo "VALID_VERSION=false" >> $GITHUB_OUTPUT
             exit 1
           fi
           
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_OUTPUT
-          echo "VALID_VERSION=true" >> $GITHUB_OUTPUT
           
       # 第二步：生成 PKGBUILD 文件
       - name: 生成 PKGBUILD 文件
-        if: steps.get_latest_tag.outputs.VALID_VERSION == 'true'
         id: generate_pkgbuild
         run: |
           RELEASE_TAG="${{ steps.get_latest_tag.outputs.RELEASE_TAG }}"
@@ -113,13 +109,7 @@ jobs:
           echo "生成的 PKGBUILD 内容："
           cat PKGBUILD
           
-      - name: 跳过更新提示
-        if: steps.get_latest_tag.outputs.VALID_VERSION == 'false'
-        run: |
-          echo "⚠️ 版本检查未通过，跳过更新流程"
-            
       - name: 发布到 AUR
-        if: steps.get_latest_tag.outputs.VALID_VERSION == 'true'
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: zed-cn
@@ -127,6 +117,5 @@ jobs:
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: Update to ${{ steps.get_latest_tag.outputs.RELEASE_TAG }}
+          commit_message: Update to ${{ steps.get_tag.outputs.RELEASE_TAG }}
           ssh_keyscan_types: rsa,ecdsa,ed25519
-
