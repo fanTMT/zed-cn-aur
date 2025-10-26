@@ -108,6 +108,17 @@ jobs:
           
           echo "生成的 PKGBUILD 内容："
           cat PKGBUILD
+
+      - name: 测试 AUR 连接
+        run: |
+          echo "测试连接到 aur.archlinux.org..."
+          timeout 30s ssh-keyscan -T 30 aur.archlinux.org || echo "SSH 密钥扫描超时"
+          
+          echo "测试 ping..."
+          ping -c 3 aur.archlinux.org || echo "Ping 测试失败"
+          
+          echo "测试端口连接..."
+          timeout 10s nc -z -w 5 aur.archlinux.org 22 && echo "SSH 端口可访问" || echo "SSH 端口不可访问"
           
       - name: 发布到 AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
