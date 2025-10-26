@@ -43,7 +43,7 @@ jobs:
           
       # 第二步：生成 PKGBUILD 文件
       - name: 生成 PKGBUILD 文件
-        if: steps.check_version.outputs.VALID_VERSION == 'true'
+        if: steps.get_latest_tag.outputs.VALID_VERSION == 'true'
         id: generate_pkgbuild
         run: |
           RELEASE_TAG="${{ steps.get_latest_tag.outputs.RELEASE_TAG }}"
