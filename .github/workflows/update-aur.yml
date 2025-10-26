@@ -114,11 +114,12 @@ jobs:
           cat PKGBUILD
           
       - name: 跳过更新提示
-        if: steps.check_version.outputs.VALID_VERSION == 'false'
+        if: steps.get_latest_tag.outputs.VALID_VERSION == 'false'
         run: |
-            echo "⚠️ 版本检查未通过，跳过更新流程"
+          echo "⚠️ 版本检查未通过，跳过更新流程"
             
       - name: 发布到 AUR
+        if: steps.get_latest_tag.outputs.VALID_VERSION == 'true'
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: zed-cn
