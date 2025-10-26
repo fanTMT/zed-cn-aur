@@ -127,6 +127,6 @@ jobs:
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: Update to ${{ steps.get_tag.outputs.RELEASE_TAG }}
+          commit_message: Update to ${{ steps.get_latest_tag.outputs.RELEASE_TAG }}
           ssh_keyscan_types: rsa,ecdsa,ed25519
 
