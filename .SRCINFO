@@ -1,0 +1,14 @@
+pkgbase = zed-cn
+	pkgdesc = zed-loc (Zed 汉化) github-TC999/zed-loc
+	pkgver = 20251018
+	pkgrel = 1
+	url = https://github.com/TC999/zed-loc
+	arch = x86_64
+	license = custom:"Copyright (c) 2015 Abner Lee All Rights Reserved."
+	provides = zed-cn
+	conflicts = zed-cn
+	options = !debug
+	source = zed-cn-20251018.tar.gz::https://github.com/TC999/zed-loc/releases/download/20251018/zed-linux-x86_64.tar.gz
+	sha512sums = SKIP
+
+pkgname = zed-cn

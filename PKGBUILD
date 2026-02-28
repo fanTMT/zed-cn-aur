@@ -41,7 +41,6 @@ package() {
     fi
   done
   # 如果需要：桌面文件
-  # install -Dm644 "$srcdir/$_path.app/share/applications/$_path.desktop" "$pkgdir/usr/share/applications/zed-cn.desktop"
   install -Dm644 "$srcdir/$_path".app/share/applications/*.desktop "$pkgdir/usr/share/applications/zed-cn.desktop"
   # 移除调试符号（避免生成debug包）
   find "$pkgdir" -name "*.debug" -delete

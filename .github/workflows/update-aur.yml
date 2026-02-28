@@ -99,7 +99,7 @@ jobs:
           echo '  done' >> PKGBUILD
           echo '' >> PKGBUILD
           echo '  # 如果需要：桌面文件' >> PKGBUILD
-          echo '  install -Dm644 "$srcdir/zed-dev.app/share/applications/zed-dev.desktop" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
+          echo '  install -Dm644 "$srcdir/zed-dev.app/share/applications/*.desktop" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
           echo '' >> PKGBUILD
           echo '  # 移除调试符号（避免生成debug包）' >> PKGBUILD
           echo '  find "$pkgdir" -name "*.debug" -delete' >> PKGBUILD
