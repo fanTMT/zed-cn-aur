@@ -1,0 +1,10 @@
+# Build artifacts - 不要提交二进制文件
+src/
+pkg/
+*.tar.gz
+*.pkg.tar.zst
+*.app.zip
+*.deb
+*.rpm
+*.exe
+*.dmg
