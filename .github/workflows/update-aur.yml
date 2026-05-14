@@ -16,17 +16,37 @@ jobs:
       - name: 从latest接口获取最新版本
         id: get_latest_tag
         run: |
+
           # 使用 /releases/latest 接口直接获取最新的正式版
-          LATEST_RELEASE_JSON=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases/latest")
+          # 建议设置环境变量 GITHUB_TOKEN 避免速率限制
+          if [ -n "$TOKEN" ]; then
+              LATEST_RELEASE_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" \
+                  "https://api.github.com/repos/TC999/zed-loc/releases/latest")
+          else
+              # 没有 token 时也能工作，但可能受速率限制（60次/小时）
+              echo "警告: 未设置 TOKEN，可能受 GitHub API 速率限制" >&2
+              LATEST_RELEASE_JSON=$(curl -s "https://api.github.com/repos/TC999/zed-loc/releases/latest")
+          fi
+          
+          # 检查 API 是否返回错误（如速率限制、仓库不存在等）
+          if echo "$LATEST_RELEASE_JSON" | jq -e '.message' > /dev/null 2>&1; then
+              ERROR_MSG=$(echo "$LATEST_RELEASE_JSON" | jq -r '.message')
+              echo "错误: GitHub API 返回: $ERROR_MSG" >&2
+              
+              # 如果是速率限制错误，显示重置时间
+              if echo "$ERROR_MSG" | grep -qi "rate limit"; then
+                  echo "提示: 请设置 GITHUB_TOKEN 环境变量以提高限制" >&2
+              fi
+              exit 1
+          fi
           
           # 从返回的JSON中提取tag_name字段
           RELEASE_TAG=$(echo "$LATEST_RELEASE_JSON" | jq -r '.tag_name')
           
-          # 检查获取到的版本号是否为空
+          # 检查是否成功获取到 tag
           if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" = "null" ]; then
-            echo "❌ 错误：未能从latest接口获取到有效的版本号"
-            echo "VALID_VERSION=false" >> $GITHUB_OUTPUT
-            exit 1
+              echo "错误: 无法获取 release tag，可能该仓库没有 release" >&2
+              exit 1
           fi
           
           echo "通过latest接口找到的最新版本: $RELEASE_TAG"
