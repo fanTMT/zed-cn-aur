@@ -120,14 +120,12 @@ jobs:
           echo '' >> PKGBUILD
           # 安装桌面文件（适配实际的 .desktop 文件名）
           echo '  # 安装桌面文件' >> PKGBUILD
-          echo '  # 查找任意 .desktop 文件（不限定特定名称）' >> PKGBUILD
+          echo '  # 查找任意 .desktop 文件' >> PKGBUILD
           echo '  DESKTOP_FILE=$(ls "$srcdir/zed-dev.app/share/applications/"*.desktop 2>/dev/null | head -1)' >> PKGBUILD
           echo '  if [ -n "$DESKTOP_FILE" ]; then' >> PKGBUILD
           echo '    install -Dm644 "$DESKTOP_FILE" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
           echo '    # 修改应用名称' >> PKGBUILD
           echo '    sed -i "s/^Name=.*/Name=Zed (CN)/" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
-          echo '    # 修改图标路径' >> PKGBUILD
-          echo '    sed -i "s/^Icon=.*/Icon=zed-cn/" "$pkgdir/usr/share/applications/zed-cn.desktop"' >> PKGBUILD
           echo '  else' >> PKGBUILD
           echo '    echo "警告：未找到 .desktop 文件"' >> PKGBUILD
           echo '  fi' >> PKGBUILD
