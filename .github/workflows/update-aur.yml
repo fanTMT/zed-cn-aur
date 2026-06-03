@@ -123,7 +123,7 @@ jobs:
           echo '  # 查找任意 .desktop 文件' >> PKGBUILD
           echo '  desktop_file=$(find "$srcdir/zed-dev.app/share/applications" -maxdepth 1 -name "*.desktop" 2>/dev/null | head -n1)' >> PKGBUILD
           # 安装桌面文件
-          echo '  install -Dm644 "$desktop_file" "$pkgdir/usr/share/applications/zed-cn.desktop ' >> PKGBUILD
+          echo '  install -Dm644 "$desktop_file" "$pkgdir/usr/share/applications/zed-cn.desktop" ' >> PKGBUILD
           echo '  # 移除调试符号（避免生成debug包）' >> PKGBUILD
           echo '  find "$pkgdir" -name "*.debug" -delete' >> PKGBUILD
           echo '  strip --strip-all "$pkgdir/opt/$pkgname/bin/zed" 2>/dev/null || true' >> PKGBUILD
